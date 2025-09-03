@@ -27,16 +27,21 @@ if "basket" not in st.session_state:
     st.session_state.basket = []
 if "show_admin_login" not in st.session_state:
     st.session_state.show_admin_login = False
+if "theme" not in st.session_state:
+    st.session_state.theme = {"primary": "#e10600", "secondary": "#fff"}  # Valeur par défaut
+if "show_add_modal" not in st.session_state:
+    st.session_state.show_add_modal = None  # id de l'image à ajouter
 
 # ============== HEADER / ADMIN ==============
 col1, col2, col3 = st.columns([2,5,2])
 with col1:
-    st.markdown('<span style="background-color:#e10600;color:white;font-weight:bold;padding:4px 10px;border-radius:8px;">ROUGE & BLANC</span>', unsafe_allow_html=True)
+    pass  # SUPPRIME : st.markdown('<span ...>ROUGE & BLANC</span>', unsafe_allow_html=True)
 with col2:
     st.markdown("### Catalogue des motifs")
 with col3:
     if st.session_state.admin:
-        st.markdown('<span style="background:linear-gradient(90deg,#e10600,#ff1a3d);color:white;padding:4px 10px;border-radius:8px;">Admin connecté</span>', unsafe_allow_html=True)
+        st.markdown('<span style="background:linear-gradient(90deg,{},{secondary});color:white;padding:4px 10px;border-radius:8px;">Admin connecté</span>'.format(
+            st.session_state.theme.get("primary", "#e10600"), secondary=st.session_state.theme.get("secondary", "#fff")), unsafe_allow_html=True)
         if st.button("Déconnexion admin"):
             st.session_state.admin = False
             st.success("Déconnecté")
@@ -63,9 +68,16 @@ if st.session_state.get("show_admin_login", False):
             else:
                 st.error("Mot de passe incorrect")
 
-# ============== ADMIN ZONE ==============
+# ============== ADMIN ZONE : THEME PERSONNALISATION ==============
 if st.session_state.admin:
     st.write("## Espace Admin")
+    with st.expander("🎨 Personnaliser le thème pour tous"):
+        primary = st.color_picker("Couleur principale", value=st.session_state.theme.get("primary", "#e10600"))
+        secondary = st.color_picker("Couleur secondaire", value=st.session_state.theme.get("secondary", "#fff"))
+        if st.button("Appliquer le thème"):
+            st.session_state.theme = {"primary": primary, "secondary": secondary}
+            st.success("Thème mis à jour !")
+
     for img in IMAGES:
         comments = st.session_state.comments.get(img["id"], [])
         feasibility = st.session_state.feasibility_comments.get(img["id"], [])
@@ -81,7 +93,7 @@ if st.session_state.admin:
                 for idx, c in enumerate(comments):
                     st.markdown(
                         f"""
-                        <div style="border:1px solid #eee;border-radius:10px;padding:.6rem .7rem;margin:.5rem 0;background:#fff">
+                        <div style="border:1px solid #eee;border-radius:10px;padding:.6rem .7rem;margin:.5rem 0;background:{st.session_state.theme['secondary']}">
                         <strong>{c['name']}</strong> · <span style='color:#888'>{c['ts']}</span>
                         <div style="margin-top:.35rem;white-space:pre-wrap;color:#222">{c['text']}</div>
                         </div>
@@ -98,9 +110,9 @@ if st.session_state.admin:
                 for idx, f in enumerate(feasibility):
                     st.markdown(
                         f"""
-                        <div style="border:1px solid #e10600;border-radius:10px;padding:.6rem .7rem;margin:.5rem 0;background:#fff">
+                        <div style="border:1px solid {st.session_state.theme['primary']};border-radius:10px;padding:.6rem .7rem;margin:.5rem 0;background:{st.session_state.theme['secondary']}">
                         <strong>{f['name']}</strong> · <span style='color:#888'>{f['ts']}</span>
-                        <div style="margin-top:.35rem;white-space:pre-wrap;color:#e10600">{f['text']}</div>
+                        <div style="margin-top:.35rem;white-space:pre-wrap;color:{st.session_state.theme['primary']}">{f['text']}</div>
                         </div>
                         """, unsafe_allow_html=True
                     )
@@ -116,12 +128,23 @@ st.write("## Motifs")
 cols = st.columns(3)
 for idx, img in enumerate(IMAGES):
     with cols[idx % 3]:
-        # Ajout au panier
+        # Ajout au panier avec modal
         in_basket = img["id"] in st.session_state.basket
-        if not in_basket:
-            if st.button(f"Ajouter au panier : {img['title']}", key=f"basket_add_{img['id']}"):
+        if st.session_state.show_add_modal == img["id"]:
+            st.write("### Ajouter au panier")
+            st.image(img["src"], caption=img["title"], use_container_width=True)
+            st.write("Confirmer l'ajout au panier ?")
+            confirm = st.button("Oui, ajouter", key=f"confirm_add_{img['id']}")
+            cancel = st.button("Annuler", key=f"cancel_add_{img['id']}")
+            if confirm:
                 st.session_state.basket.append(img["id"])
+                st.session_state.show_add_modal = None
                 st.success(f"{img['title']} ajouté au panier !")
+            elif cancel:
+                st.session_state.show_add_modal = None
+        elif not in_basket:
+            if st.button(f"Ajouter au panier : {img['title']}", key=f"basket_add_{img['id']}"):
+                st.session_state.show_add_modal = img["id"]
         else:
             if st.button(f"Retirer du panier : {img['title']}", key=f"basket_remove_{img['id']}"):
                 st.session_state.basket.remove(img["id"])
@@ -129,7 +152,7 @@ for idx, img in enumerate(IMAGES):
         st.image(img["src"], caption=f"{img['title']} ({img['id']})", use_container_width=True)
         st.write("Thème rouge & blanc · effet néon + zoom")
         st.markdown(f"**{img['title']}**")
-        st.markdown(f"<span style='background:#fff;color:#e10600;border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='background:{st.session_state.theme['secondary']};color:{st.session_state.theme['primary']};border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
         # Bouton Télécharger uniquement pour admin
         if st.session_state.admin:
             st.download_button("⬇️ Télécharger", img["src"], file_name=img["id"] + ".jpg")
@@ -143,7 +166,7 @@ if st.session_state.basket:
     for i, img in enumerate(basket_imgs):
         with cols_basket[i]:
             st.image(img["src"], caption=img["title"], width=180)
-            st.markdown(f"<span style='background:#fff;color:#e10600;border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
+            st.markdown(f"<span style='background:{st.session_state.theme['secondary']};color:{st.session_state.theme['primary']};border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
 
     with st.form("basket_form"):
         st.write("#### Vos coordonnées")
@@ -183,4 +206,4 @@ if st.session_state.basket:
                 st.session_state.basket = []
 
 st.write("---")
-st.write("JARVIS • Catalogue statique compatible Streamlit · © 2025")
+st.write("STANNM • Catalogue statique pour SADELA INDUSTRIE· © 2025")
