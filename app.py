@@ -31,11 +31,47 @@ if "theme" not in st.session_state:
     st.session_state.theme = {"primary": "#e10600", "secondary": "#fff"}  # Valeur par défaut
 if "show_add_modal" not in st.session_state:
     st.session_state.show_add_modal = None  # id de l'image à ajouter
+if "show_popup" not in st.session_state:
+    st.session_state.show_popup = False
+if "popup_message" not in st.session_state:
+    st.session_state.popup_message = ""
+
+# ============== PANIER ANIMATION EN HAUT À DROITE ==============
+basket_count = len(st.session_state.basket)
+custom_css = f"""
+<style>
+#basket-anim {{
+    position: fixed;
+    top: 20px;
+    right: 30px;
+    z-index: 9999;
+    background: {st.session_state.theme['primary']};
+    color: {st.session_state.theme['secondary']};
+    padding: 10px 25px;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    box-shadow: 0 2px 12px #e1060030;
+    transition: transform 0.3s;
+    animation: pulse 1.2s infinite;
+    border: 2px solid #fff;
+}}
+@keyframes pulse {{
+    0% {{ transform: scale(1); box-shadow: 0 2px 12px #e1060030; }}
+    50% {{ transform: scale(1.12); box-shadow: 0 4px 24px #e1060080; }}
+    100% {{ transform: scale(1); box-shadow: 0 2px 12px #e1060030; }}
+}}
+</style>
+<div id="basket-anim" onclick="window.location.hash='basket-popup'">
+    🛒 Panier : <span style="font-size:1.3rem">{basket_count}</span>
+</div>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
 
 # ============== HEADER / ADMIN ==============
 col1, col2, col3 = st.columns([2,5,2])
 with col1:
-    pass  # SUPPRIME : st.markdown('<span ...>ROUGE & BLANC</span>', unsafe_allow_html=True)
+    pass
 with col2:
     st.markdown("### Catalogue des motifs")
 with col3:
@@ -50,6 +86,25 @@ with col3:
             st.session_state.show_admin_login = True
 
 st.write("---")
+
+# ============== POPUP FENÊTRE ==============
+if st.session_state.show_popup:
+    with st.popover("Panier", use_container_width=True):
+        st.write("## Vos articles dans le panier")
+        basket_imgs = [img for img in IMAGES if img["id"] in st.session_state.basket]
+        for img in basket_imgs:
+            st.image(img["src"], caption=img["title"], width=140)
+            st.markdown(f"<span style='background:{st.session_state.theme['secondary']};color:{st.session_state.theme['primary']};border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
+        if st.button("Fermer", key="close_popup"):
+            st.session_state.show_popup = False
+        st.write("---")
+        st.write(st.session_state.popup_message)
+        st.write("Pour passer commande, cliquez sur 'Demande groupée' plus bas.")
+
+# Ajout d'un bouton flottant pour ouvrir le panier (simulateur)
+if st.button("👁 Voir le panier", key="basket_popup_btn"):
+    st.session_state.show_popup = True
+    st.session_state.popup_message = ""
 
 # ============== ADMIN LOGIN MODAL ==============
 if st.session_state.get("show_admin_login", False):
@@ -87,7 +142,6 @@ if st.session_state.admin:
             st.download_button("Télécharger l'image", img["src"], file_name=img["id"] + ".jpg")
         with col_info:
             st.markdown(f"**{img['title']}** ({img['id']})")
-            # Afficher QUE pour l'admin !
             if comments:
                 st.markdown("#### Commentaires (admin uniquement)")
                 for idx, c in enumerate(comments):
@@ -104,7 +158,6 @@ if st.session_state.admin:
                         st.experimental_rerun()
             else:
                 st.markdown("<em style='color:#bbb'>Aucun commentaire</em>", unsafe_allow_html=True)
-            # Affichage faisabilité (idem avant)
             if feasibility:
                 st.markdown("#### Demandes de faisabilité (privées)")
                 for idx, f in enumerate(feasibility):
@@ -128,7 +181,6 @@ st.write("## Motifs")
 cols = st.columns(3)
 for idx, img in enumerate(IMAGES):
     with cols[idx % 3]:
-        # Ajout au panier avec modal
         in_basket = img["id"] in st.session_state.basket
         if st.session_state.show_add_modal == img["id"]:
             st.write("### Ajouter au panier")
@@ -139,7 +191,8 @@ for idx, img in enumerate(IMAGES):
             if confirm:
                 st.session_state.basket.append(img["id"])
                 st.session_state.show_add_modal = None
-                st.success(f"{img['title']} ajouté au panier !")
+                st.session_state.popup_message = f"{img['title']} ajouté au panier !"
+                st.session_state.show_popup = True  # Affiche pop-up confirmation
             elif cancel:
                 st.session_state.show_add_modal = None
         elif not in_basket:
@@ -153,7 +206,6 @@ for idx, img in enumerate(IMAGES):
         st.write("Thème rouge & blanc · effet néon + zoom")
         st.markdown(f"**{img['title']}**")
         st.markdown(f"<span style='background:{st.session_state.theme['secondary']};color:{st.session_state.theme['primary']};border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
-        # Bouton Télécharger uniquement pour admin
         if st.session_state.admin:
             st.download_button("⬇️ Télécharger", img["src"], file_name=img["id"] + ".jpg")
         st.write("---")
@@ -173,7 +225,6 @@ if st.session_state.basket:
         name = st.text_input("Votre nom", key="basket_name")
         email = st.text_input("Votre email", key="basket_email")
         message = st.text_area("Votre demande ou commentaire global", key="basket_msg")
-        # Ajout du commentaire uniquement pour admin
         comment = st.text_area("Commentaire (visible uniquement pour l'admin)", key="basket_admin_comment")
         submit = st.form_submit_button("Envoyer la demande groupée")
         cancel = st.form_submit_button("Vider le panier")
@@ -193,7 +244,6 @@ if st.session_state.basket:
                         "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                     })
                     st.session_state.feasibility_comments[img_id] = feas_list
-                    # Ajout du commentaire privé pour l'admin
                     if comment:
                         comments = st.session_state.comments.get(img_id, [])
                         comments.append({
@@ -204,6 +254,8 @@ if st.session_state.basket:
                         st.session_state.comments[img_id] = comments
                 st.success("Votre demande groupée a bien été envoyée ✅")
                 st.session_state.basket = []
+                st.session_state.show_popup = True
+                st.session_state.popup_message = "Demande groupée envoyée avec succès !"
 
 st.write("---")
 st.write("STANNM • Catalogue statique pour SADELA INDUSTRIE· © 2025")
