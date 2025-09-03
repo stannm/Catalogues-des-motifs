@@ -23,6 +23,17 @@ if "selected_image_id" not in st.session_state:
 if "delete_comment_trigger" not in st.session_state:
     st.session_state.delete_comment_trigger = None
 
+# ======= SUPPRESSION DES COMMENTAIRES ADMIN =======
+# Ce bloc doit être placé juste après l'initialisation du session_state
+if st.session_state.delete_comment_trigger:
+    img_id, comm_idx = st.session_state.delete_comment_trigger
+    feas_list = st.session_state.feasibility_comments.get(img_id, [])
+    if 0 <= comm_idx < len(feas_list):
+        feas_list.pop(comm_idx)
+        st.session_state.feasibility_comments[img_id] = feas_list
+    st.session_state.delete_comment_trigger = None
+    st.experimental_rerun()
+
 # ============== CUSTOM CSS FOR ZOOM & NEON ==============
 st.markdown("""
     <style>
@@ -107,17 +118,6 @@ if st.session_state.admin:
             else:
                 st.markdown("<em style='color:#bbb'>Aucune demande de faisabilité</em>", unsafe_allow_html=True)
     st.write("---")
-
-# ======= SUPPRESSION DES COMMENTAIRES ADMIN =======
-# Ce bloc doit être placé après la zone admin pour que le bouton fonctionne correctement
-if st.session_state.delete_comment_trigger:
-    img_id, comm_idx = st.session_state.delete_comment_trigger
-    feas_list = st.session_state.feasibility_comments.get(img_id, [])
-    if 0 <= comm_idx < len(feas_list):
-        feas_list.pop(comm_idx)
-        st.session_state.feasibility_comments[img_id] = feas_list
-    st.session_state.delete_comment_trigger = None
-    st.experimental_rerun()
 
 # ============== BARRE DE RECHERCHE ==============
 search_query = st.text_input("🔎 Rechercher un motif...", "")
