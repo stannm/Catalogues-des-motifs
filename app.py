@@ -8,7 +8,7 @@ ADMIN_PASSWORD = "tdi2025!"  # Change ce mot de passe
 IMAGES = [
     {
         "id": "motif-01",
-        "title": "Finition",
+        "title": "Finition 1",
         "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-finition-1.jpg"
     },
     {
@@ -25,6 +25,31 @@ IMAGES = [
         "id": "motif-04",
         "title": "Découpe 8",
         "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-decoupe-8.jpg"
+    },
+    {
+        "id": "motif-05",
+        "title": "Montage 1",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-montage-1.jpg"
+    },
+    {
+        "id": "motif-06",
+        "title": "Montage 4",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-montage-4.jpg"
+    },
+    {
+        "id": "motif-07",
+        "title": "Montage 3",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-montage-3.jpg"
+    },
+    {
+        "id": "motif-08",
+        "title": "Montage 2",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-montage-2.jpg"
+    },
+    {
+        "id": "motif-09",
+        "title": "Finition 2",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-finition-2.jpg"
     },
 ]
 
