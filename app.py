@@ -6,12 +6,26 @@ st.set_page_config(page_title="Catalogue des motifs – SADELA INDUSTRIE", layou
 # ============== CONFIGURATION ==============
 ADMIN_PASSWORD = "tdi2025!"  # Change ce mot de passe 
 IMAGES = [
-    {"id": "motif-01", "title": "Motif géométrique 01", "src": "https://picsum.photos/id/1011/1000/700"},
-    {"id": "motif-02", "title": "Motif lignes 02",     "src": "https://picsum.photos/id/1015/1000/700"},
-    {"id": "motif-03", "title": "Motif floral 03",     "src": "https://picsum.photos/id/1025/1000/700"},
-    {"id": "motif-04", "title": "Motif marbre 04",     "src": "https://picsum.photos/id/1039/1000/700"},
-    {"id": "motif-05", "title": "Motif damier 05",     "src": "https://picsum.photos/id/1060/1000/700"},
-    {"id": "motif-06", "title": "Motif techno 06",     "src": "https://picsum.photos/id/1074/1000/700"},
+    {
+        "id": "motif-01",
+        "title": "Finition",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-finition-1.jpg"
+    },
+    {
+        "id": "motif-02",
+        "title": "Découpe Laser 1",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-decoupe-laser-1.jpg"
+    },
+    {
+        "id": "motif-03",
+        "title": "Découpe Laser 2",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-decoupe-laser-2.jpg"
+    },
+    {
+        "id": "motif-04",
+        "title": "Découpe 8",
+        "src": "https://www.sadela.eu/templates/rt_xenon/custom/images/sadela-decoupe-8.jpg"
+    },
 ]
 
 if "feasibility_comments" not in st.session_state:
