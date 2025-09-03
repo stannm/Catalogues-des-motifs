@@ -14,6 +14,7 @@ IMAGES = [
     {"id": "motif-06", "title": "Motif techno 06",     "src": "https://picsum.photos/id/1074/1000/700"},
 ]
 
+# ============== SESSION STATE INIT ==============
 if "comments" not in st.session_state:
     st.session_state.comments = {}
 if "feasibility_comments" not in st.session_state:
@@ -22,6 +23,10 @@ if "admin" not in st.session_state:
     st.session_state.admin = False
 if "selected_image_id" not in st.session_state:
     st.session_state.selected_image_id = None
+if "basket" not in st.session_state:
+    st.session_state.basket = []
+if "show_admin_login" not in st.session_state:
+    st.session_state.show_admin_login = False
 
 # ============== HEADER / ADMIN ==============
 col1, col2, col3 = st.columns([2,5,2])
@@ -70,10 +75,10 @@ if st.session_state.admin:
             st.download_button("Télécharger l'image", img["src"], file_name=img["id"] + ".jpg")
         with col_info:
             st.markdown(f"**{img['title']}** ({img['id']})")
-            # Afficher commentaires publics (si tu veux les garder)
+            # Afficher QUE pour l'admin !
             if comments:
-                st.markdown("#### Commentaires publics")
-                for c in comments:
+                st.markdown("#### Commentaires (admin uniquement)")
+                for idx, c in enumerate(comments):
                     st.markdown(
                         f"""
                         <div style="border:1px solid #eee;border-radius:10px;padding:.6rem .7rem;margin:.5rem 0;background:#fff">
@@ -82,10 +87,15 @@ if st.session_state.admin:
                         </div>
                         """, unsafe_allow_html=True
                     )
-            # Afficher commentaires de faisabilité (privés)
+                    if st.button(f"🗑️ Supprimer commentaire {idx+1}", key=f"del_pub_{img['id']}_{idx}"):
+                        st.session_state.comments[img["id"]].pop(idx)
+                        st.experimental_rerun()
+            else:
+                st.markdown("<em style='color:#bbb'>Aucun commentaire</em>", unsafe_allow_html=True)
+            # Affichage faisabilité (idem avant)
             if feasibility:
                 st.markdown("#### Demandes de faisabilité (privées)")
-                for f in feasibility:
+                for idx, f in enumerate(feasibility):
                     st.markdown(
                         f"""
                         <div style="border:1px solid #e10600;border-radius:10px;padding:.6rem .7rem;margin:.5rem 0;background:#fff">
@@ -94,6 +104,9 @@ if st.session_state.admin:
                         </div>
                         """, unsafe_allow_html=True
                     )
+                    if st.button(f"🗑️ Supprimer faisabilité {idx+1}", key=f"del_feas_{img['id']}_{idx}"):
+                        st.session_state.feasibility_comments[img["id"]].pop(idx)
+                        st.experimental_rerun()
             else:
                 st.markdown("<em style='color:#bbb'>Aucune demande de faisabilité</em>", unsafe_allow_html=True)
     st.write("---")
@@ -103,9 +116,16 @@ st.write("## Motifs")
 cols = st.columns(3)
 for idx, img in enumerate(IMAGES):
     with cols[idx % 3]:
-        # Sélection par image (bouton ou clickable avec Streamlit)
-        if st.button(f"Sélectionner {img['title']}", key=f"select_{img['id']}"):
-            st.session_state.selected_image_id = img["id"]
+        # Ajout au panier
+        in_basket = img["id"] in st.session_state.basket
+        if not in_basket:
+            if st.button(f"Ajouter au panier : {img['title']}", key=f"basket_add_{img['id']}"):
+                st.session_state.basket.append(img["id"])
+                st.success(f"{img['title']} ajouté au panier !")
+        else:
+            if st.button(f"Retirer du panier : {img['title']}", key=f"basket_remove_{img['id']}"):
+                st.session_state.basket.remove(img["id"])
+                st.info(f"{img['title']} retiré du panier.")
         st.image(img["src"], caption=f"{img['title']} ({img['id']})", use_container_width=True)
         st.write("Thème rouge & blanc · effet néon + zoom")
         st.markdown(f"**{img['title']}**")
@@ -115,31 +135,52 @@ for idx, img in enumerate(IMAGES):
             st.download_button("⬇️ Télécharger", img["src"], file_name=img["id"] + ".jpg")
         st.write("---")
 
-# ============== FAISABILITÉ & COMMENTAIRE ==============
-selected_id = st.session_state.selected_image_id
-if selected_id:
-    selected_img = next((img for img in IMAGES if img["id"] == selected_id), None)
-    st.write(f"### Demander la faisabilité pour : {selected_img['title']}")
-    with st.form(f"feasibility_form_{selected_id}"):
-        name = st.text_input("Votre nom", key=f"feas_name_{selected_id}")
-        text = st.text_area("Votre demande / commentaire", key=f"feas_text_{selected_id}")
-        submit = st.form_submit_button("Envoyer la demande")
-        cancel = st.form_submit_button("Annuler la sélection")
+# ============== PANIER ET DEMANDE GROUPEE ==============
+if st.session_state.basket:
+    st.write("### Votre panier")
+    basket_imgs = [img for img in IMAGES if img["id"] in st.session_state.basket]
+    cols_basket = st.columns(len(basket_imgs))
+    for i, img in enumerate(basket_imgs):
+        with cols_basket[i]:
+            st.image(img["src"], caption=img["title"], width=180)
+            st.markdown(f"<span style='background:#fff;color:#e10600;border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
+
+    with st.form("basket_form"):
+        st.write("#### Vos coordonnées")
+        name = st.text_input("Votre nom", key="basket_name")
+        email = st.text_input("Votre email", key="basket_email")
+        message = st.text_area("Votre demande ou commentaire global", key="basket_msg")
+        # Ajout du commentaire uniquement pour admin
+        comment = st.text_area("Commentaire (visible uniquement pour l'admin)", key="basket_admin_comment")
+        submit = st.form_submit_button("Envoyer la demande groupée")
+        cancel = st.form_submit_button("Vider le panier")
         if cancel:
-            st.session_state.selected_image_id = None
+            st.session_state.basket = []
+            st.info("Panier vidé.")
         elif submit:
-            if not name or not text:
-                st.warning("Veuillez remplir tous les champs.")
+            if not name or not email or not message:
+                st.warning("Veuillez remplir tous les champs pour envoyer la demande.")
             else:
-                feas_list = st.session_state.feasibility_comments.get(selected_id, [])
-                feas_list.append({
-                    "name": name,
-                    "text": text,
-                    "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                })
-                st.session_state.feasibility_comments[selected_id] = feas_list
-                st.success("Demande envoyée ✅")
-                st.session_state.selected_image_id = None
+                for img_id in st.session_state.basket:
+                    feas_list = st.session_state.feasibility_comments.get(img_id, [])
+                    feas_list.append({
+                        "name": name,
+                        "email": email,
+                        "text": message,
+                        "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                    })
+                    st.session_state.feasibility_comments[img_id] = feas_list
+                    # Ajout du commentaire privé pour l'admin
+                    if comment:
+                        comments = st.session_state.comments.get(img_id, [])
+                        comments.append({
+                            "name": name,
+                            "text": comment,
+                            "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                        })
+                        st.session_state.comments[img_id] = comments
+                st.success("Votre demande groupée a bien été envoyée ✅")
+                st.session_state.basket = []
 
 st.write("---")
 st.write("JARVIS • Catalogue statique compatible Streamlit · © 2025")
