@@ -20,6 +20,8 @@ if "admin" not in st.session_state:
     st.session_state.admin = False
 if "selected_image_id" not in st.session_state:
     st.session_state.selected_image_id = None
+if "delete_comment_trigger" not in st.session_state:
+    st.session_state.delete_comment_trigger = None
 
 # ============== CUSTOM CSS FOR ZOOM & NEON ==============
 st.markdown("""
@@ -87,7 +89,8 @@ if st.session_state.admin:
             # Afficher commentaires de faisabilité (privés)
             if feasibility:
                 st.markdown("#### Demandes de faisabilité (privées)")
-                for f in feasibility:
+                for idx, f in enumerate(feasibility):
+                    delete_key = f"delcomment_{img['id']}_{idx}"
                     st.markdown(
                         f"""
                         <div style="border:1px solid #e10600;border-radius:10px;padding:.6rem .7rem;margin:.5rem 0;background:#fff">
@@ -97,9 +100,24 @@ if st.session_state.admin:
                         </div>
                         """, unsafe_allow_html=True
                     )
+                    # Bouton pour supprimer le commentaire
+                    if st.button("🗑️ Supprimer ce commentaire", key=delete_key):
+                        st.session_state.delete_comment_trigger = (img["id"], idx)
+                        st.experimental_rerun()
             else:
                 st.markdown("<em style='color:#bbb'>Aucune demande de faisabilité</em>", unsafe_allow_html=True)
     st.write("---")
+
+# ======= SUPPRESSION DES COMMENTAIRES ADMIN =======
+# Ce bloc doit être placé après la zone admin pour que le bouton fonctionne correctement
+if st.session_state.delete_comment_trigger:
+    img_id, comm_idx = st.session_state.delete_comment_trigger
+    feas_list = st.session_state.feasibility_comments.get(img_id, [])
+    if 0 <= comm_idx < len(feas_list):
+        feas_list.pop(comm_idx)
+        st.session_state.feasibility_comments[img_id] = feas_list
+    st.session_state.delete_comment_trigger = None
+    st.experimental_rerun()
 
 # ============== BARRE DE RECHERCHE ==============
 search_query = st.text_input("🔎 Rechercher un motif...", "")
@@ -153,4 +171,4 @@ if selected_id:
                 st.session_state.selected_image_id = None
 
 st.write("---")
-st.write("STANNM • Catalogue statique pour SADELA INDUSTRIE · © 2025")
+st.write("STANNM • Catalogue statique pour SADELA INDUSTRIE · v0.11 © 2025")
