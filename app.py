@@ -106,7 +106,7 @@ for idx, img in enumerate(IMAGES):
         # Sélection par image (bouton ou clickable avec Streamlit)
         if st.button(f"Sélectionner {img['title']}", key=f"select_{img['id']}"):
             st.session_state.selected_image_id = img["id"]
-        st.image(img["src"], caption=f"{img['title']} ({img['id']})", use_column_width=True)
+        st.image(img["src"], caption=f"{img['title']} ({img['id']})", use_container_width=True)
         st.write("Thème rouge & blanc · effet néon + zoom")
         st.markdown(f"**{img['title']}**")
         st.markdown(f"<span style='background:#fff;color:#e10600;border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
