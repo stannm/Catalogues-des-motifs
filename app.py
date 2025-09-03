@@ -36,78 +36,137 @@ if "show_popup" not in st.session_state:
 if "popup_message" not in st.session_state:
     st.session_state.popup_message = ""
 
-# ============== PANIER ANIMATION EN HAUT À DROITE ==============
+# ============== SIDEBAR : NAVIGATION & PANIER ==============
+st.sidebar.title("🧭 Navigation")
+page = st.sidebar.radio(
+    "Aller à",
+    ["Accueil", "Motifs", "Panier", "Espace Admin" if st.session_state.admin else "Connexion admin"]
+)
 basket_count = len(st.session_state.basket)
-custom_css = f"""
-<style>
-#basket-anim {{
-    position: fixed;
-    top: 20px;
-    right: 30px;
-    z-index: 9999;
-    background: {st.session_state.theme['primary']};
-    color: {st.session_state.theme['secondary']};
-    padding: 10px 25px;
-    border-radius: 30px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    box-shadow: 0 2px 12px #e1060030;
-    transition: transform 0.3s;
-    animation: pulse 1.2s infinite;
-    border: 2px solid #fff;
-}}
-@keyframes pulse {{
-    0% {{ transform: scale(1); box-shadow: 0 2px 12px #e1060030; }}
-    50% {{ transform: scale(1.12); box-shadow: 0 4px 24px #e1060080; }}
-    100% {{ transform: scale(1); box-shadow: 0 2px 12px #e1060030; }}
-}}
-</style>
-<div id="basket-anim" onclick="window.location.hash='basket-popup'">
-    🛒 Panier : <span style="font-size:1.3rem">{basket_count}</span>
-</div>
-"""
-st.markdown(custom_css, unsafe_allow_html=True)
+st.sidebar.markdown("---")
+st.sidebar.markdown(f"## 🛒 Panier ({basket_count})")
+if st.session_state.basket:
+    for img_id in st.session_state.basket:
+        img = next((i for i in IMAGES if i["id"] == img_id), None)
+        if img:
+            st.sidebar.image(img["src"], width=80)
+            st.sidebar.markdown(f"{img['title']}")
+    if st.sidebar.button("Voir le panier complet"):
+        page = "Panier"
+else:
+    st.sidebar.markdown("*Votre panier est vide*")
 
-# ============== HEADER / ADMIN ==============
+st.sidebar.markdown("---")
+st.sidebar.write("STANNM • SADELA INDUSTRIE © 2025")
+
+# ============== HEADER ==============
 col1, col2, col3 = st.columns([2,5,2])
-with col1:
-    pass
 with col2:
-    st.markdown("### Catalogue des motifs")
+    st.markdown("<h1 style='text-align:center;margin-bottom:0;'>Catalogue des motifs</h1>", unsafe_allow_html=True)
 with col3:
     if st.session_state.admin:
         st.markdown('<span style="background:linear-gradient(90deg,{},{secondary});color:white;padding:4px 10px;border-radius:8px;">Admin connecté</span>'.format(
             st.session_state.theme.get("primary", "#e10600"), secondary=st.session_state.theme.get("secondary", "#fff")), unsafe_allow_html=True)
-        if st.button("Déconnexion admin"):
-            st.session_state.admin = False
-            st.success("Déconnecté")
-    else:
-        if st.button("Espace admin"):
-            st.session_state.show_admin_login = True
 
 st.write("---")
 
-# ============== POPUP FENÊTRE ==============
-if st.session_state.show_popup:
-    with st.popover("Panier", use_container_width=True):
-        st.write("## Vos articles dans le panier")
+# ============== PAGE ACCUEIL ==============
+if page == "Accueil":
+    st.markdown("## Bienvenue !")
+    st.markdown("Découvrez notre sélection de motifs Rouge & Blanc. Utilisez le menu à gauche pour naviguer.")
+
+# ============== PAGE MOTIFS ==============
+if page == "Motifs":
+    st.write("### Motifs disponibles")
+    # Responsive grid : 1 colonne sur mobile, 3 sur desktop
+    import streamlit as st
+    import sys
+    width = st.experimental_get_query_params().get("width",[1200])
+    try:
+        width = int(width[0])
+    except Exception:
+        width = 1200
+    n_cols = 1 if width < 600 else 3
+
+    cols = st.columns(n_cols)
+    for idx, img in enumerate(IMAGES):
+        with cols[idx % n_cols]:
+            in_basket = img["id"] in st.session_state.basket
+            st.image(img["src"], caption=img["title"], use_container_width=True)
+            st.markdown(f"**{img['title']}**")
+            if st.session_state.admin:
+                st.download_button("⬇️ Télécharger", img["src"], file_name=img["id"] + ".jpg")
+            if st.session_state.show_add_modal == img["id"]:
+                st.write("Confirmer l'ajout au panier ?")
+                confirm = st.button("Oui, ajouter", key=f"confirm_add_{img['id']}")
+                cancel = st.button("Annuler", key=f"cancel_add_{img['id']}")
+                if confirm:
+                    st.session_state.basket.append(img["id"])
+                    st.session_state.show_add_modal = None
+                    st.session_state.popup_message = f"{img['title']} ajouté au panier !"
+                    st.session_state.show_popup = True
+                elif cancel:
+                    st.session_state.show_add_modal = None
+            elif not in_basket:
+                if st.button(f"Ajouter au panier", key=f"basket_add_{img['id']}"):
+                    st.session_state.show_add_modal = img["id"]
+            else:
+                if st.button(f"Retirer du panier", key=f"basket_remove_{img['id']}"):
+                    st.session_state.basket.remove(img["id"])
+                    st.info(f"{img['title']} retiré du panier.")
+
+# ============== PAGE PANIER ==============
+if page == "Panier":
+    st.write("## Votre panier")
+    if not st.session_state.basket:
+        st.warning("Votre panier est vide.")
+    else:
         basket_imgs = [img for img in IMAGES if img["id"] in st.session_state.basket]
-        for img in basket_imgs:
-            st.image(img["src"], caption=img["title"], width=140)
-            st.markdown(f"<span style='background:{st.session_state.theme['secondary']};color:{st.session_state.theme['primary']};border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
-        if st.button("Fermer", key="close_popup"):
-            st.session_state.show_popup = False
-        st.write("---")
-        st.write(st.session_state.popup_message)
-        st.write("Pour passer commande, cliquez sur 'Demande groupée' plus bas.")
+        cols_basket = st.columns(len(basket_imgs))
+        for i, img in enumerate(basket_imgs):
+            with cols_basket[i]:
+                st.image(img["src"], caption=img["title"], width=180)
+                st.markdown(f"<span style='background:{st.session_state.theme['secondary']};color:{st.session_state.theme['primary']};border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
 
-# Ajout d'un bouton flottant pour ouvrir le panier (simulateur)
-if st.button("👁 Voir le panier", key="basket_popup_btn"):
-    st.session_state.show_popup = True
-    st.session_state.popup_message = ""
+        with st.form("basket_form"):
+            st.write("#### Vos coordonnées")
+            name = st.text_input("Votre nom", key="basket_name")
+            email = st.text_input("Votre email", key="basket_email")
+            message = st.text_area("Votre demande ou commentaire global", key="basket_msg")
+            comment = st.text_area("Commentaire (visible uniquement pour l'admin)", key="basket_admin_comment")
+            submit = st.form_submit_button("Envoyer la demande groupée")
+            cancel = st.form_submit_button("Vider le panier")
+            if cancel:
+                st.session_state.basket = []
+                st.info("Panier vidé.")
+            elif submit:
+                if not name or not email or not message:
+                    st.warning("Veuillez remplir tous les champs pour envoyer la demande.")
+                else:
+                    for img_id in st.session_state.basket:
+                        feas_list = st.session_state.feasibility_comments.get(img_id, [])
+                        feas_list.append({
+                            "name": name,
+                            "email": email,
+                            "text": message,
+                            "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                        })
+                        st.session_state.feasibility_comments[img_id] = feas_list
+                        if comment:
+                            comments = st.session_state.comments.get(img_id, [])
+                            comments.append({
+                                "name": name,
+                                "text": comment,
+                                "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            })
+                            st.session_state.comments[img_id] = comments
+                    st.success("Votre demande groupée a bien été envoyée ✅")
+                    st.session_state.basket = []
+                    st.session_state.show_popup = True
+                    st.session_state.popup_message = "Demande groupée envoyée avec succès !"
 
-# ============== ADMIN LOGIN MODAL ==============
-if st.session_state.get("show_admin_login", False):
+# ============== ADMIN LOGIN / ZONE ==============
+if page == "Connexion admin" and not st.session_state.admin:
     with st.form("admin-login"):
         st.write("### Connexion Admin")
         pwd = st.text_input("Mot de passe", type="password")
@@ -118,13 +177,11 @@ if st.session_state.get("show_admin_login", False):
         elif ok:
             if pwd == ADMIN_PASSWORD:
                 st.session_state.admin = True
-                st.session_state.show_admin_login = False
                 st.success("Connecté en admin ✅")
             else:
                 st.error("Mot de passe incorrect")
 
-# ============== ADMIN ZONE : THEME PERSONNALISATION ==============
-if st.session_state.admin:
+if page == "Espace Admin" and st.session_state.admin:
     st.write("## Espace Admin")
     with st.expander("🎨 Personnaliser le thème pour tous"):
         primary = st.color_picker("Couleur principale", value=st.session_state.theme.get("primary", "#e10600"))
@@ -132,7 +189,6 @@ if st.session_state.admin:
         if st.button("Appliquer le thème"):
             st.session_state.theme = {"primary": primary, "secondary": secondary}
             st.success("Thème mis à jour !")
-
     for img in IMAGES:
         comments = st.session_state.comments.get(img["id"], [])
         feasibility = st.session_state.feasibility_comments.get(img["id"], [])
@@ -176,86 +232,7 @@ if st.session_state.admin:
                 st.markdown("<em style='color:#bbb'>Aucune demande de faisabilité</em>", unsafe_allow_html=True)
     st.write("---")
 
-# ============== GRID MOTIFS ==============
-st.write("## Motifs")
-cols = st.columns(3)
-for idx, img in enumerate(IMAGES):
-    with cols[idx % 3]:
-        in_basket = img["id"] in st.session_state.basket
-        if st.session_state.show_add_modal == img["id"]:
-            st.write("### Ajouter au panier")
-            st.image(img["src"], caption=img["title"], use_container_width=True)
-            st.write("Confirmer l'ajout au panier ?")
-            confirm = st.button("Oui, ajouter", key=f"confirm_add_{img['id']}")
-            cancel = st.button("Annuler", key=f"cancel_add_{img['id']}")
-            if confirm:
-                st.session_state.basket.append(img["id"])
-                st.session_state.show_add_modal = None
-                st.session_state.popup_message = f"{img['title']} ajouté au panier !"
-                st.session_state.show_popup = True  # Affiche pop-up confirmation
-            elif cancel:
-                st.session_state.show_add_modal = None
-        elif not in_basket:
-            if st.button(f"Ajouter au panier : {img['title']}", key=f"basket_add_{img['id']}"):
-                st.session_state.show_add_modal = img["id"]
-        else:
-            if st.button(f"Retirer du panier : {img['title']}", key=f"basket_remove_{img['id']}"):
-                st.session_state.basket.remove(img["id"])
-                st.info(f"{img['title']} retiré du panier.")
-        st.image(img["src"], caption=f"{img['title']} ({img['id']})", use_container_width=True)
-        st.write("Thème rouge & blanc · effet néon + zoom")
-        st.markdown(f"**{img['title']}**")
-        st.markdown(f"<span style='background:{st.session_state.theme['secondary']};color:{st.session_state.theme['primary']};border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
-        if st.session_state.admin:
-            st.download_button("⬇️ Télécharger", img["src"], file_name=img["id"] + ".jpg")
-        st.write("---")
-
-# ============== PANIER ET DEMANDE GROUPEE ==============
-if st.session_state.basket:
-    st.write("### Votre panier")
-    basket_imgs = [img for img in IMAGES if img["id"] in st.session_state.basket]
-    cols_basket = st.columns(len(basket_imgs))
-    for i, img in enumerate(basket_imgs):
-        with cols_basket[i]:
-            st.image(img["src"], caption=img["title"], width=180)
-            st.markdown(f"<span style='background:{st.session_state.theme['secondary']};color:{st.session_state.theme['primary']};border-radius:999px;padding:2px 15px;border:1px solid #ffd1d6'>{img['id']}</span>", unsafe_allow_html=True)
-
-    with st.form("basket_form"):
-        st.write("#### Vos coordonnées")
-        name = st.text_input("Votre nom", key="basket_name")
-        email = st.text_input("Votre email", key="basket_email")
-        message = st.text_area("Votre demande ou commentaire global", key="basket_msg")
-        comment = st.text_area("Commentaire (visible uniquement pour l'admin)", key="basket_admin_comment")
-        submit = st.form_submit_button("Envoyer la demande groupée")
-        cancel = st.form_submit_button("Vider le panier")
-        if cancel:
-            st.session_state.basket = []
-            st.info("Panier vidé.")
-        elif submit:
-            if not name or not email or not message:
-                st.warning("Veuillez remplir tous les champs pour envoyer la demande.")
-            else:
-                for img_id in st.session_state.basket:
-                    feas_list = st.session_state.feasibility_comments.get(img_id, [])
-                    feas_list.append({
-                        "name": name,
-                        "email": email,
-                        "text": message,
-                        "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                    })
-                    st.session_state.feasibility_comments[img_id] = feas_list
-                    if comment:
-                        comments = st.session_state.comments.get(img_id, [])
-                        comments.append({
-                            "name": name,
-                            "text": comment,
-                            "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                        })
-                        st.session_state.comments[img_id] = comments
-                st.success("Votre demande groupée a bien été envoyée ✅")
-                st.session_state.basket = []
-                st.session_state.show_popup = True
-                st.session_state.popup_message = "Demande groupée envoyée avec succès !"
-
-st.write("---")
-st.write("STANNM • Catalogue statique pour SADELA INDUSTRIE· © 2025")
+# ============== POPUP CONFIRMATION ==============
+if st.session_state.show_popup:
+    st.success(st.session_state.popup_message)
+    st.session_state.show_popup = False
